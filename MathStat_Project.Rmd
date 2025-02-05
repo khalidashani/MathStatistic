@@ -1,0 +1,153 @@
+---
+title: "Math Stat Project"
+author: "Khalid"
+output: pdf_document
+header-includes:
+  - \usepackage{lscape}
+  - \geometry{landscape}
+geometry: margin=1in, landscape
+---
+
+# Analysis on Housing Market Data
+
+## Data Exploration
+
+```{r}
+# Open data on R
+data <- read.csv("C:\\Users\\Khalid Laptop\\Desktop\\Study\\Math Stat Project\\archive (17)\\housing_price_dataset.csv", header=T)
+
+# Data Exploration
+
+## Sample of the datasets
+head(data)
+
+## Structure of the datasets
+str(data)
+
+## Dimension of the datasets
+dim(data)
+
+# Unique value for few of the column
+unique(data$Bedrooms)
+unique(data$Bathrooms)
+unique(data$Neighborhood)
+unique(data$YearBuilt)
+
+# Checking for missing value
+sum(is.na(data))
+```
+
+## Data Transformation
+
+```{r}
+# Group collumn with continuous value into different value
+
+## Checking for range
+range(data$SquareFeet, na.rm = TRUE)
+range(data$Price, na.rm = TRUE)
+
+## Handling the row with negative value on the Price column
+sum(data$Price < 0, na.rm = TRUE)
+data <- data[data$Price >= 0, ]
+
+## Group the group accordingly
+
+### SquareFeet
+data$SquareFeet_Group <- cut(data$SquareFeet, 
+                             breaks = seq(1000, 3000, length.out = 6), 
+                             labels = c("Small", "Medium", "Average", "Large", "Extra Large"),
+                             include.lowest = TRUE)
+### Price
+data$Price_Group <- cut(data$Price, 
+                        breaks = seq(154.78, 492195.26, length.out = 6), 
+                        labels = c("Low", "Affordable", "Mid-range", "High-end", "Luxury"),
+                        include.lowest = TRUE)
+
+```
+
+## Data Analysis
+
+### 1. Does Year Built contribute to the Housing Price?
+
+```{r}
+# Function to get the mode (most frequent value)
+get_mode <- function(x) {
+  uniq_x <- unique(x)
+  uniq_x[which.max(table(x))]
+}
+
+# Aggregate the data to get the mode of Price_Group by YearBuilt
+agg_data <- aggregate(Price ~ YearBuilt, data = data, FUN = get_mode)
+
+# View the aggregated data
+head(agg_data)
+
+# Plot the line chart with YearBuilt on X-axis and Price Group on Y-axis
+plot(agg_data$YearBuilt, as.numeric(agg_data$Price), 
+     type = "b",  # "b" creates both points and lines
+     col = "black", 
+     xlab = "Year Built", 
+     ylab = "Price",
+     main = "Price Trend by Year Built",
+     pch = 16)  # Points as circle markers
+
+# Add a smooth line for trend
+lines(agg_data$YearBuilt, as.numeric(agg_data$Price), col = "#d9b99b", lwd = 2)
+```
+
+### 2. Does Neighbourd Hood contribute to the Housing Price?
+
+```{r}
+# Boxplot
+
+## Boxplot to compare Price across Neighborhood
+boxplot(Price ~ Neighborhood, data = data,
+        main = "Housing Price by Neighborhood",
+        xlab = "Neighborhood", ylab = "Price",
+        col = c("lightblue", "lightgreen", "lightpink"))
+
+# Violin Plot
+
+## Violin plot to compare Price across Neighborhood
+library(ggplot2)
+ggplot(data, aes(x = Neighborhood, y = Price, fill = Neighborhood)) +
+  geom_violin(trim = FALSE) +
+  labs(title = "Housing Price Distribution by Neighborhood", 
+       x = "Neighborhood", y = "Price") +
+  theme_minimal()
+
+# Bar Plot with Mean/Median Price
+
+# Calculate mean price by Neighborhood
+mean_price <- aggregate(Price ~ Neighborhood, data = data, FUN = mean)
+
+# Bar plot of mean price by Neighborhood
+barplot(mean_price$Price, names.arg = mean_price$Neighborhood,
+        col = c("lightblue", "lightgreen", "lightpink"),
+        main = "Mean Housing Price by Neighborhood",
+        xlab = "Neighborhood", ylab = "Mean Price")
+
+# Scatter Plot with Linear Regression Line
+## Convert Neighborhood to a factor for plotting
+data$Neighborhood <- factor(data$Neighborhood, levels = c("Rural", "Suburb", "Urban"))
+
+## Scatter plot with regression line
+ggplot(data, aes(x = Neighborhood, y = Price)) +
+  geom_point(aes(color = Neighborhood)) +
+  geom_smooth(method = "lm", aes(group = 1), color = "red") +
+  labs(title = "Housing Price vs Neighborhood",
+       x = "Neighborhood", y = "Price") +
+  theme_minimal()
+```
+
+### 3. Does SquareFeet contribute to the Housing Price?
+
+```{r}
+# Scatter plot of SquareFeet vs. Price with a regression line
+ggplot(data, aes(x = SquareFeet, y = Price)) +
+  geom_point(color = "#eed9c4") +  # Points colored blue
+  geom_smooth(method = "lm", aes(group = 1), color = "#d9b99b", se = FALSE) +  # Linear regression line colored red
+  labs(title = "Relationship Between Square Feet and Price",
+       x = "Square Feet", y = "Price") +
+  theme_minimal()
+```
